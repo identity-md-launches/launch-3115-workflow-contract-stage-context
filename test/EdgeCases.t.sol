@@ -15,7 +15,8 @@ import {
     Slot,
     PetView
 } from "./TestBase.sol";
-import {LootHarness} from "./mocks/Harnesses.sol";
+import {LootHarness, ReaderHarness} from "./mocks/Harnesses.sol";
+import {ISqueekCoreV3} from "../src/interfaces/ISqueekCoreV3.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
@@ -70,6 +71,75 @@ contract EdgeCasesTest is SqueekTestBase {
         vm.prank(alice);
         game.transferFrom(alice, bob, id);
         assertEq(game.ownerOf(id), bob);
+    }
+
+    /// A valid single-struct page reply (afterRound 5, throughRound 10, limit 2, one record), as words.
+    function _pageWords() private pure returns (uint256[] memory w) {
+        w = new uint256[](15);
+        (w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]) = (32, 8, 10, 3e9, 1, 20, 5e9, 2);
+        (w[8], w[9], w[10], w[11], w[12], w[13], w[14]) = (256, 1, 7, 20, 5e9, 2, 0xabcd);
+    }
+
+    function _readPage(ReaderHarness reader, uint256[] memory w) private returns (bool ok) {
+        bytes memory reply = abi.encodePacked(w);
+        vm.mockCall(
+            address(core), abi.encodeCall(ISqueekCoreV3.roundPage, (uint64(5), uint64(10), uint256(2))), reply
+        );
+        (ok,) = reader.page(address(core), 5, 10, 2);
+        vm.clearMockedCalls();
+    }
+
+    function testMalformedPageRepliesAreRejectedFieldByField() public {
+        ReaderHarness reader = new ReaderHarness();
+        uint256[] memory w = _pageWords();
+        assertTrue(_readPage(reader, w), "well-formed page accepted");
+        // Boundaries that must still be accepted: certified at either end of the window, max-width fields.
+        w[1] = 5;
+        assertTrue(_readPage(reader, w), "certified == afterRound");
+        w[1] = 10;
+        assertTrue(_readPage(reader, w), "certified == throughRound");
+        (w[2], w[3], w[4], w[10]) = (type(uint64).max, type(uint96).max, type(uint32).max, type(uint64).max);
+        assertTrue(_readPage(reader, w), "max-width fields");
+
+        // index => bad value; each one alone must make the read fail.
+        uint256[2][12] memory bad = [
+            [uint256(0), 64], // struct offset word
+            [uint256(0), 0],
+            [uint256(8), 224], // rounds offset
+            [uint256(8), 288],
+            [uint256(1), 4], // certified before afterRound
+            [uint256(1), 11], // certified past throughRound
+            [uint256(9), 3], // count above limit
+            [uint256(2), uint256(type(uint64).max) + 1], // start work overflow
+            [uint256(6), uint256(type(uint96).max) + 1], // end units overflow
+            [uint256(7), uint256(type(uint32).max) + 1], // end auxiliary overflow
+            [uint256(10), uint256(type(uint64).max) + 1], // record roundId overflow
+            [uint256(12), uint256(type(uint96).max) + 1] // record units overflow
+        ];
+        for (uint256 i; i < bad.length; ++i) {
+            w = _pageWords();
+            w[bad[i][0]] = bad[i][1];
+            assertFalse(_readPage(reader, w), string.concat("mutation ", vm.toString(i)));
+        }
+
+        // Length must match the count exactly: a record short, a word extra, or a count of 0 with a record.
+        w = _pageWords();
+        uint256[] memory shortReply = new uint256[](14);
+        for (uint256 i; i < 14; ++i) {
+            shortReply[i] = w[i];
+        }
+        assertFalse(_readPage(reader, shortReply), "truncated record");
+        uint256[] memory longReply = new uint256[](16);
+        for (uint256 i; i < 15; ++i) {
+            longReply[i] = w[i];
+        }
+        assertFalse(_readPage(reader, longReply), "trailing word");
+        w[9] = 0;
+        assertFalse(_readPage(reader, w), "count disagrees with length");
+        // The legacy bare-tuple layout (no leading offset word) is not the live core's.
+        uint256[] memory legacy = new uint256[](9);
+        (legacy[0], legacy[7]) = (8, 256);
+        assertFalse(_readPage(reader, legacy), "bare tuple layout");
     }
 
     function testNonexistentPetWritesUseERC721Error() public {

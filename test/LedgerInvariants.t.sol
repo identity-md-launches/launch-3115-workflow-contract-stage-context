@@ -173,8 +173,8 @@ contract LedgerHandler is Test {
     }
 
     function _checkDraw(Expedition memory t, Loot memory res, uint32 oldPity) internal {
-        (,, ISqueekCoreV3.Point memory s,) = core.roundPage(t.startRound - 1, t.startRound - 1, 0);
-        (,, ISqueekCoreV3.Point memory e,) = core.roundPage(t.endRound, t.endRound, 0);
+        ISqueekCoreV3.Point memory s = core.roundPage(t.startRound - 1, t.startRound - 1, 0).end;
+        ISqueekCoreV3.Point memory e = core.roundPage(t.endRound, t.endRound, 0).end;
         uint64 work = e.cumulativeWork - s.cumulativeWork;
         uint96 blocks = e.cumulativeBlockUnits / 1e9 - s.cumulativeBlockUnits / 1e9;
         uint64 busiest;
