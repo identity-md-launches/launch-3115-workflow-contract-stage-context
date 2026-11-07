@@ -1,0 +1,18 @@
+{
+  "kind": "evm_contracts",
+  "contracts": [
+    {
+      "contract": "SqueeklingsArt",
+      "constructorArgs": []
+    },
+    {
+      "contract": "Squeeklings",
+      "constructorArgs": [
+        "0xfd6c166d4b8e2962e65746a13e5a0797cd4de0c4",
+        "$contract:SqueeklingsArt",
+        "$owner"
+      ]
+    }
+  ],
+  "notes": "Deploy SqueeklingsArt, the pure on-chain SVG renderer, before Squeeklings, the free SQLING ERC-721 pet game. Squeeklings uses the approved Sepolia SqueekCore V3 address and the deployed renderer. Its explicit administrator is $owner, whose only administrative power is setCore. Both constructors are nonpayable and require no initialization calls."
+}
