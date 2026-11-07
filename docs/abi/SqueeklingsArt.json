@@ -1,0 +1,134 @@
+[
+  {
+    "type": "function",
+    "name": "render",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "data",
+        "type": "tuple",
+        "internalType": "struct PetView",
+        "components": [
+          {
+            "name": "seed",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "ageBlocks",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pity",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "stage",
+            "type": "uint8",
+            "internalType": "enum Stage"
+          },
+          {
+            "name": "mood",
+            "type": "uint8",
+            "internalType": "enum Mood"
+          },
+          {
+            "name": "away",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "signalLost",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "equipped",
+            "type": "uint8[4]",
+            "internalType": "uint8[4]"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "svg",
+    "inputs": [
+      {
+        "name": "data",
+        "type": "tuple",
+        "internalType": "struct PetView",
+        "components": [
+          {
+            "name": "seed",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "ageBlocks",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pity",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "stage",
+            "type": "uint8",
+            "internalType": "enum Stage"
+          },
+          {
+            "name": "mood",
+            "type": "uint8",
+            "internalType": "enum Mood"
+          },
+          {
+            "name": "away",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "signalLost",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "equipped",
+            "type": "uint8[4]",
+            "internalType": "uint8[4]"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "error",
+    "name": "InvalidItem",
+    "inputs": []
+  }
+]
