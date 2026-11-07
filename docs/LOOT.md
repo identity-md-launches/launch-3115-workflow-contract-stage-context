@@ -18,6 +18,14 @@ This makes the roll fully reproducible; modulo reduction has the tiny/bounded bi
 in this specified scheme (three common choices do not divide a byte evenly). These are game
 odds, not cryptographic fairness guarantees.
 
+**Dream rolls can be chosen by embark timing.** A zero-work window has no data hashes, so its
+entropy is the constant `keccak256("")`; with the public seed and token ID, the only free input
+is `endRound`, which the player fixes by choosing when to embark. While the hamster is idle a
+player can therefore wait for an embark round whose Dream roll is below 10 (about one round in
+ten) and take the 36-round route for a certain Wishing Star, falling back to an ordinary Trail
+draw if the hamster works after all. The percentages below describe one untimed roll. This is
+the approved formula as written; any change to it is the requester's decision.
+
 Apply the following in order:
 
 1. If eligible and `r < 10`, Legendary.

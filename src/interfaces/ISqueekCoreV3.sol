@@ -24,8 +24,17 @@ interface ISqueekCoreV3 {
         view
         returns (bytes32, uint64, uint64, uint64, uint16, address, address, uint32, uint64, uint64, uint96);
 
+    /// @dev The deployed V3 core returns the page as one dynamic struct: the reply begins with a
+    /// 0x20 offset word, then certified, start, end, the rounds offset (256) and the record count.
+    struct RoundPage {
+        uint64 certifiedThroughRound;
+        Point start;
+        Point end;
+        Round[] rounds;
+    }
+
     function roundPage(uint64 afterRound, uint64 throughRound, uint256 maxRecords)
         external
         view
-        returns (uint64 certifiedThroughRound, Point memory start, Point memory end, Round[] memory rounds);
+        returns (RoundPage memory page);
 }

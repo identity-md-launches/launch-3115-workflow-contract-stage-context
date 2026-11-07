@@ -30,6 +30,14 @@ contract ReaderHarness {
     {
         return Reader.history(core, afterRound, throughRound);
     }
+
+    function page(address core, uint64 afterRound, uint64 throughRound, uint256 limit)
+        external
+        view
+        returns (bool, Reader.Page memory)
+    {
+        return Reader.page(core, afterRound, throughRound, limit);
+    }
 }
 
 contract LootHarness {

@@ -21,6 +21,10 @@ library SqueekCoreReader {
         uint64 duration;
     }
 
+    /// @dev Fixed part of a roundPage reply: offset word, certified, two points, rounds offset, count.
+    uint256 internal constant PAGE_HEAD = 320;
+    uint256 internal constant RECORD_BYTES = 160;
+
     struct Page {
         uint64 certified;
         ISqueekCoreV3.Point start;
@@ -96,22 +100,25 @@ library SqueekCoreReader {
         (ok, data) = boundedCall(
             core,
             abi.encodeCall(ISqueekCoreV3.roundPage, (afterRound, throughRound, limit)),
-            288 + limit * 160,
+            PAGE_HEAD + limit * RECORD_BYTES,
             READ_GAS
         );
-        if (!ok || data.length < 288) return (false, p);
-        uint256 count = word(data, 8);
+        if (!ok || data.length < PAGE_HEAD) return (false, p);
+        // Single-struct layout, as the deployed V3 core encodes it: word 0 is the struct offset (32),
+        // word 1 certified, words 2-4 start, words 5-7 end, word 8 the rounds offset (256) relative to
+        // the struct, word 9 the record count, then five words per record.
+        uint256 count = word(data, 9);
         if (
-            word(data, 7) != 256 || count > limit || data.length != 288 + count * 160
-                || word(data, 0) < afterRound || word(data, 0) > throughRound || !_validPoint(data, 1)
-                || !_validPoint(data, 4)
+            word(data, 0) != 32 || word(data, 8) != 256 || count > limit
+                || data.length != PAGE_HEAD + count * RECORD_BYTES || word(data, 1) < afterRound
+                || word(data, 1) > throughRound || !_validPoint(data, 2) || !_validPoint(data, 5)
         ) return (false, p);
         for (uint256 i; i < count; ++i) {
-            uint256 offset = 9 + i * 5;
+            uint256 offset = 10 + i * 5;
             if (word(data, offset) > type(uint64).max || !_validPoint(data, offset + 1)) return (false, p);
         }
-        (p.certified, p.start, p.end, p.rounds) =
-            abi.decode(data, (uint64, ISqueekCoreV3.Point, ISqueekCoreV3.Point, ISqueekCoreV3.Round[]));
+        ISqueekCoreV3.RoundPage memory decoded = abi.decode(data, (ISqueekCoreV3.RoundPage));
+        p = Page(decoded.certifiedThroughRound, decoded.start, decoded.end, decoded.rounds);
     }
 
     function _same(ISqueekCoreV3.Point memory a, ISqueekCoreV3.Point memory b) private pure returns (bool) {

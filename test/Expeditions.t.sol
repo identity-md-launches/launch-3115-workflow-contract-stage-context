@@ -139,8 +139,7 @@ contract ExpeditionsTest is SqueekTestBase {
             core.append(active ? 1 : 0, active ? 1e9 : 0, hash);
             if (active) hashes = bytes.concat(hashes, hash);
         }
-        (uint64 certified,,,) = core.roundPage(1, 37, 16);
-        assertEq(certified, 34);
+        assertEq(core.roundPage(1, 37, 16).certifiedThroughRound, 34);
         ReaderHarness reader = new ReaderHarness();
         (bool ok, Reader.History memory h) = reader.history(address(core), 1, 37);
         assertTrue(ok);

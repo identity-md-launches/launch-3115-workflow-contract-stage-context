@@ -139,7 +139,9 @@ contract MetadataAndFaultsTest is SqueekTestBase {
         Expedition memory trip = embark(id, 0);
         settleEmpty(trip.endRound);
         bytes memory query = abi.encodeCall(ISqueekCoreV3.roundPage, (uint64(1), trip.endRound, uint256(16)));
+        // Struct layout with an absurd record count: rejected before abi.decode can run out of data.
         bytes memory response = abi.encode(
+            uint256(32),
             uint256(trip.endRound),
             uint256(0),
             uint256(0),
@@ -149,6 +151,22 @@ contract MetadataAndFaultsTest is SqueekTestBase {
             uint256(0),
             uint256(256),
             type(uint256).max
+        );
+        vm.mockCall(address(core), query, response);
+        vm.expectRevert(Squeeklings.InvalidHistory.selector);
+        game.returnHome(id);
+        assertTrue(game.expedition(id).away);
+        // The bare four-value tuple (288 bytes, no leading offset word) is not the live core's layout.
+        response = abi.encode(
+            uint256(trip.endRound),
+            uint256(0),
+            uint256(0),
+            uint256(0),
+            uint256(0),
+            uint256(0),
+            uint256(0),
+            uint256(256),
+            uint256(0)
         );
         vm.mockCall(address(core), query, response);
         vm.expectRevert(Squeeklings.InvalidHistory.selector);

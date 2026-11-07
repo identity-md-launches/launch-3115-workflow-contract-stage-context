@@ -42,7 +42,10 @@ Deploy exactly these two applications in order, with **zero ETH**:
 - `core_`: supplied Sepolia SqueekCore V3, **`0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4`**.
 - `art_`: the actual address of the `SqueeklingsArt` deployed immediately before this contract;
   the separate manifest can use `$contract:SqueeklingsArt`.
-- `owner_`: **`0x60731C2F051dA8708E405f64e803F3c8D1059dee`**, the supplied launch owner (`$owner`).
+- `owner_`: the launch owner, written by the manifest as **`$owner`**. The approved workflow
+  names no owner address; `$owner` resolves to the wallet the launch terms record as the
+  owner (the requester's named owner, else the wallet that paid). This README deliberately
+  states no literal so the manifest cannot copy a value the brief did not supply.
   Ownership is explicit and immutable; the factory and transaction origin receive no powers.
 
 Constructors reject zero addresses but make **no external calls** and do not require
@@ -51,8 +54,15 @@ The core starts in epoch 1. There is no proxy, initializer, linked library, toke
 pool, fungible token, or deployment script that reads keys or broadcasts.
 
 The supplied core's live deployment has not been independently attested here. The implementation
-uses the exact supplied V3 ABI. The launch service/reviewer must confirm that the deployed source
-and configuration match it; tests use a deterministic mock, not a live-chain fork.
+uses the supplied V3 function signatures, with one encoding detail taken from the deployed
+contract rather than the brief's prose: the live core returns `roundPage` as **one dynamic
+struct** `(uint64 certifiedThroughRound, Point start, Point end, Round[] rounds)`, so a reply
+begins with a `0x20` offset word, carries the rounds offset `256` at word 8 and the record count
+at word 9, and is `320 + 160 * records` bytes long. `ISqueekCoreV3.RoundPage` declares that
+layout and the reader enforces it. `test/LiveCoreLayout.t.sol` replays byte-exact `eth_call`
+replies captured from the pinned Sepolia core at block 12,085,427, and the mock returns the same
+layout. The launch service/reviewer must still confirm the deployed source and configuration;
+tests use captured replies and a deterministic mock, not a live-chain fork.
 
 ## Game rules and chosen conventions
 
@@ -66,6 +76,17 @@ fur palettes and participates in capsule selection. This is the requested determ
 randomness, **not a verifiable or manipulation-resistant randomness service**. There are no
 payments or monetary rewards. Addresses and hatch timing can be selected; core data producers
 influence data hashes. Do not attach financial prizes or paid pulls to this mechanism.
+
+**Dream rolls are predictable in advance.** The specified roll is
+`keccak256(entropy, seed, tokenId, endRound) % 100`, and a window with no active rounds has the
+constant entropy `keccak256("")`. The seed is public and the end round follows from the embark
+round, so a player who embarks while the hamster is idle can compute the capsule a zero-work trip
+would open and choose an embark round whose Dream roll is legendary (about one round in ten).
+If the hamster works during the trip, it becomes an ordinary Trail draw instead, so the tactic
+costs nothing. The published Dream odds are therefore the odds of one untimed roll, not an
+upper bound on what a timing player can obtain. This is the approved formula implemented as
+written; changing it (for example mixing in a value unknown at embark) would alter the brief's
+roll and is left to the requester. Nothing of value is at stake and no fix is applied here.
 
 Global age is `max(ageBase + core.cumulativeBlockUnits - coreStart, 0)`. Initially `ageBase`
 and `coreStart` are both zero: the initial age clock uses the core's cumulative origin, and a
@@ -118,8 +139,13 @@ This path needs neither core to be readable or settled. Home pets get no migrati
 Calling with the same core address is rejected. Switching away and back creates new epochs.
 
 This administrator is trusted to select a genuine core. A replacement can affect future age,
-moods and capsule results, and turn existing trips into Fog trips. The game validates structure
-and consistency, not the honesty of an external oracle. There is no ownership transfer,
+moods and capsule results, and turn existing trips into Fog trips, including trips whose end
+round is already settled and would otherwise have opened a Trail or Dream capsule. `setCore`
+checks only that the candidate decodes with the V3 shape (readable configuration and state,
+genesis no later than now, nonzero duration, `1e9` units per block); an owner-authored core
+that passes those checks dictates every pet's age, mood and capsule inputs. The game validates
+structure and consistency, not the honesty of an external oracle, so launch services should
+treat the `$owner` wallet as the game's oracle authority. There is no ownership transfer,
 renunciation, pause, arbitrary call, admin mint, inventory grant, price, or withdrawal function.
 
 `lastSeenAgeUnits` records successful hatch, embark, normal return, and core replacement.
@@ -128,7 +154,9 @@ checkpoint may be lost on migration. A readable core that moves backwards is cla
 to the specified formula. Neither accumulated age nor pet age can underflow.
 
 Each core static call has a **500,000 gas** budget. State/config returns must have exact static
-ABI sizes; page output is limited to **2,848 bytes** and validated before decoding. Core config
+ABI sizes; page output is limited to **`320 + 160 * maxRecords` bytes (2,880 at the 16-record
+limit)** and its struct offset, rounds offset, record count and field widths are validated
+before decoding. Core config
 must have a nonzero genesis no later than now, a nonzero duration, canonical field widths,
 and `blockUnitsPerBlock == 1e9`. Future-genesis cores are rejected until genesis. A replacement
 may be paused; historical reads must still work. Responses that exceed the gas/size bounds

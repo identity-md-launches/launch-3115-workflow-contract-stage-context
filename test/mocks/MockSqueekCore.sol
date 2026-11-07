@@ -96,8 +96,18 @@ contract MockSqueekCore is ISqueekCoreV3 {
             );
     }
 
+    /// @dev Returns one dynamic struct, exactly as the deployed Sepolia V3 core encodes its reply.
     function roundPage(uint64 afterRound, uint64 throughRound, uint256 maxRecords)
         external
+        view
+        returns (RoundPage memory page)
+    {
+        (page.certifiedThroughRound, page.start, page.end, page.rounds) =
+            _roundPage(afterRound, throughRound, maxRecords);
+    }
+
+    function _roundPage(uint64 afterRound, uint64 throughRound, uint256 maxRecords)
+        internal
         view
         returns (uint64 certified, Point memory start, Point memory end, Round[] memory rounds)
     {
